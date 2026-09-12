@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push: { branches: [main] }
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with: { enable-cache: true }
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+
+      - name: Install
+        run: |
+          uv venv --python 3.12 .venv
+          uv pip install --python .venv/bin/python -e ".[dev]"
+          npm install --no-audit --no-fund
+
+      - name: Lint
+        run: |
+          .venv/bin/ruff check src tests scripts function_app.py
+          .venv/bin/ruff format --check src tests scripts function_app.py
+
+      - name: Start Azurite
+        # Storage tests exercise the real Table Storage constraints -- batch
+        # limits and the single-partition transaction rule.
+        run: |
+          npx azurite --silent --location /tmp/azurite \
+            --blobHost 127.0.0.1 --queueHost 127.0.0.1 --tableHost 127.0.0.1 &
+          for i in $(seq 1 30); do
+            curl -s http://127.0.0.1:10002/devstoreaccount1 >/dev/null 2>&1 && break
+            sleep 1
+          done
+
+      - name: Test
+        run: .venv/bin/python -m pytest -q
+
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.2"
+          terraform_wrapper: false
+
+      - name: Format check
+        run: terraform -chdir=infra fmt -check -recursive
+
+      - name: Validate
+        # No credentials and no backend: this checks the configuration, not a
+        # deployment. `terraform plan` would need an Azure subscription.
+        run: |
+          terraform -chdir=infra init -backend=false -input=false
+          terraform -chdir=infra validate
+
+      - name: Security scan
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: infra
+          framework: terraform
+          quiet: true
+          soft_fail: true
