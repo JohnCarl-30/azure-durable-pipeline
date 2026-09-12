@@ -1,0 +1,13 @@
+{
+  "name": "azure-durable-pipeline-tooling",
+  "private": true,
+  "description": "Local-only dev tooling. Installed project-local so nothing is added to the host system.",
+  "devDependencies": {
+    "azure-functions-core-tools": "^4.0.5455",
+    "azurite": "^3.33.0"
+  },
+  "scripts": {
+    "azurite": "azurite --silent --location .azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0",
+    "func": "func"
+  }
+}

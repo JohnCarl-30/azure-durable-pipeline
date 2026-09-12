@@ -1,0 +1,11 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "AzureWebJobsFeatureFlags": "EnableWorkerIndexing",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "DIRECTORY_BASE_URL": "http://127.0.0.1:8081",
+    "ENRICHMENT_BASE_URL": "http://127.0.0.1:8082",
+    "ENRICHMENT_API_KEY": "demo-key"
+  }
+}

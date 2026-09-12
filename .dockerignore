@@ -1,0 +1,6 @@
+.venv/
+node_modules/
+.azurite/
+.logs/
+bin/
+.git/

@@ -1,0 +1,30 @@
+{
+  "version": "2.0",
+  "logging": {
+    "applicationInsights": {
+      "samplingSettings": {
+        "isEnabled": true,
+        "excludedTypes": "Request;Exception"
+      }
+    },
+    "logLevel": {
+      "Host.Triggers.DurableTask": "Information"
+    }
+  },
+  "extensions": {
+    "durableTask": {
+      "hubName": "directorypipeline",
+      "storageProvider": {
+        "connectionStringName": "AzureWebJobsStorage",
+        "partitionCount": 4
+      },
+      "maxConcurrentActivityFunctions": 10,
+      "maxConcurrentOrchestratorFunctions": 5
+    }
+  },
+  "functionTimeout": "00:10:00",
+  "extensionBundle": {
+    "id": "Microsoft.Azure.Functions.ExtensionBundle",
+    "version": "[4.*, 5.0.0)"
+  }
+}

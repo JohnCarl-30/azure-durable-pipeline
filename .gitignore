@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Project-local tooling: downloaded, not source.
+bin/
+node_modules/
+.azurite/
+.logs/
+
+# Terraform: state can contain secrets; lockfile and plans are environment-specific.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+
+# Azure Functions local settings hold connection strings.
+local.settings.json
