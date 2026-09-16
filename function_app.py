@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).parent / "src"))
 from azure_pipeline.activities import functions as activity_impl  # noqa: E402
 from azure_pipeline.activities import persistence as persist_impl  # noqa: E402
 from azure_pipeline.domain.models import CrawlRequest  # noqa: E402
+from azure_pipeline.ingest import message as ingest  # noqa: E402
 from azure_pipeline.observability import configure_logging, get_logger  # noqa: E402
 from azure_pipeline.orchestration import orchestrators  # noqa: E402
 
@@ -107,6 +108,41 @@ async def terminate(req: func.HttpRequest, client) -> func.HttpResponse:
     instance_id = req.route_params["instance_id"]
     await client.terminate(instance_id, req.params.get("reason", "terminated by operator"))
     return func.HttpResponse(status_code=202)
+
+
+# --- Queue trigger -----------------------------------------------------------
+
+
+@app.service_bus_queue_trigger(
+    arg_name="msg",
+    queue_name="ingest-requests",
+    connection="ServiceBusConnection",
+)
+@app.durable_client_input(client_name="client")
+async def ingest_requests(msg: func.ServiceBusMessage, client) -> None:
+    """Start a crawl from a queued message.
+
+    This is how the pipeline starts in production; the HTTP route above is for
+    driving it by hand. All of the logic lives in `ingest.handle` so it can be
+    tested without a broker -- this function is only the binding.
+
+    Returning normally completes the message. Raising abandons it, and the
+    broker redelivers until `max_delivery_count` (5, set in the Terraform) sends
+    it to the dead-letter queue. `handle` raises only for transient failures,
+    which is exactly when redelivery is the right answer.
+    """
+    outcome = await ingest.handle(
+        client,
+        msg.get_body(),
+        message_id=msg.message_id,
+        delivery_count=msg.delivery_count or 1,
+    )
+    log.info(
+        "servicebus.handled",
+        action=outcome.action,
+        instance_id=outcome.instance_id,
+        message_id=msg.message_id,
+    )
 
 
 # --- Orchestrators -----------------------------------------------------------

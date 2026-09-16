@@ -87,6 +87,40 @@ the workload should not be tied to one cloud.
 
 ---
 
+## How a crawl starts
+
+Two ways in, and only one of them is for production:
+
+```
+Service Bus queue ──▶ ingest_requests ──▶ crawl_orchestrator
+POST /api/crawl   ──▶ start_crawl     ──▶ crawl_orchestrator
+```
+
+The HTTP route is for driving it by hand. Real work arrives as a queued
+message, and that path has three decisions in it, none of them defaults:
+
+**Delivery is at least once.** The broker redelivers on any consumer crash,
+lock expiry or rebalance, so the same message *will* arrive twice. The
+orchestration instance id is derived from the message id rather than generated,
+so a redelivery addresses the instance that is already running instead of
+starting a second crawl over the same categories. A message published without
+an id falls back to a hash of the body — generating one per delivery would
+defeat the deduplication entirely.
+
+**A malformed message is completed, not retried.** It would fail identically
+five times and then dead-letter, spending five delivery attempts and five lock
+durations to learn nothing. This is the same permanent/transient split the
+activities use: a parse failure is permanent.
+
+**A transient failure raises.** If the Durable client is unavailable, the
+message goes back on the queue and the broker redelivers — which is exactly
+when redelivery is the right answer. Collapsing both failure kinds into one
+`except` loses the distinction, and the distinction is the whole point.
+
+All of that lives in `ingest/message.py` rather than in the trigger, so it is
+testable with a fake client and a bytes body — no broker, no host. The binding
+itself is three lines.
+
 ## Security posture
 
 The part of the Terraform worth reading: **there are no connection strings in
@@ -143,6 +177,7 @@ which is what replay determinism actually means:
 
 ```
 tests/test_orchestrators.py   generators driven by a fake context (0.13s)
+tests/test_ingest_message.py  the queue path: dedup, malformed, transient
 tests/test_activities.py      HTTP mocked; permanent vs transient classification
 tests/test_storage.py         real Azurite: batch limits, partition rules
 tests/test_infra.py           terraform validate + security properties asserted
