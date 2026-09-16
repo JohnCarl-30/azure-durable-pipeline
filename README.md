@@ -7,7 +7,7 @@ credentials, no spend.**
 
 ```bash
 make install    # venv, python deps, project-local terraform + Functions tooling
-make test       # 60+ tests
+make test       # 83 tests
 make run        # end-to-end on the real Functions host
 ```
 
@@ -171,12 +171,14 @@ logs the same line ten times. Every call routes through a helper that checks
 
 ## Testing
 
-60+ tests. The orchestrator tests need no emulator, no host and no network —
+83 tests. The orchestrator and queue-handler tests need no emulator, no host
+and no network —
 they drive the generators directly and assert the scheduled call sequence,
 which is what replay determinism actually means:
 
 ```
 tests/test_orchestrators.py   generators driven by a fake context (0.13s)
+tests/test_ingest_message.py  the queue path: dedup, malformed, transient
 tests/test_ingest_message.py  the queue path: dedup, malformed, transient
 tests/test_activities.py      HTTP mocked; permanent vs transient classification
 tests/test_storage.py         real Azurite: batch limits, partition rules
