@@ -179,7 +179,6 @@ which is what replay determinism actually means:
 ```
 tests/test_orchestrators.py   generators driven by a fake context (0.13s)
 tests/test_ingest_message.py  the queue path: dedup, malformed, transient
-tests/test_ingest_message.py  the queue path: dedup, malformed, transient
 tests/test_activities.py      HTTP mocked; permanent vs transient classification
 tests/test_storage.py         real Azurite: batch limits, partition rules
 tests/test_infra.py           terraform validate + security properties asserted
