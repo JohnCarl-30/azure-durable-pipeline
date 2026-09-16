@@ -121,6 +121,31 @@ All of that lives in `ingest/message.py` rather than in the trigger, so it is
 testable with a fake client and a bytes body — no broker, no host. The binding
 itself is three lines.
 
+## Waiting for a human
+
+`approval_orchestrator` suspends on `wait_for_external_event` with no process
+running and no polling — it can wait for days at zero compute cost, which is
+the property durable execution exists for. A durable timer races it, and the
+winner cancels the loser (an uncancelled timer keeps the instance alive until
+it fires).
+
+```bash
+make approval
+```
+
+```
+1. Start an approval (24h timeout)     instance: dc6d5985...
+2. Is it suspended, waiting?           Running — 0 CPU
+3. Approve it                          POST /api/approve -> event raised
+4. Did it resume and complete?         Completed
+                                       {'approved': True, 'timed_out': False}
+```
+
+Verified against the real host. Until recently this path was unreachable: the
+orchestrator existed and was unit-tested, `POST /api/approve/{id}` could raise
+the event — but nothing could *start* one. Registered, tested, and impossible
+to run.
+
 ## Security posture
 
 The part of the Terraform worth reading: **there are no connection strings in

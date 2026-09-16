@@ -29,6 +29,9 @@ azurite: ## Start the storage emulator in the foreground
 run: ## End-to-end against the real Functions host
 	$(PY) scripts/run_local.py
 
+approval: ## Verify the human-in-the-loop path (start -> wait -> approve -> resume)
+	$(PY) scripts/verify_approval.py
+
 start: ## Just the Functions host (expects azurite + mocks already running)
 	npx func start --python
 

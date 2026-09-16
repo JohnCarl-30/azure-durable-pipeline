@@ -88,6 +88,31 @@ async def get_status(req: func.HttpRequest, client) -> func.HttpResponse:
     )
 
 
+@app.route(route="approval", methods=["POST"])
+@app.durable_client_input(client_name="client")
+async def start_approval(req: func.HttpRequest, client) -> func.HttpResponse:
+    """Start an approval that waits for a human, or times out.
+
+    The orchestration suspends with no process running and no polling -- it can
+    wait for days at zero compute cost, which is the property durable execution
+    exists for. Resume it with POST /api/approve/{instance_id}.
+    """
+    try:
+        body = req.get_json() if req.get_body() else {}
+    except ValueError:
+        return func.HttpResponse("body must be JSON", status_code=400)
+
+    timeout_hours = int((body or {}).get("timeout_hours", 24))
+    if not 1 <= timeout_hours <= 720:
+        return func.HttpResponse("timeout_hours must be between 1 and 720", status_code=400)
+
+    started = await client.start_new(
+        "approval_orchestrator", None, {"timeout_hours": timeout_hours}
+    )
+    log.info("http.approval_started", instance_id=started, timeout_hours=timeout_hours)
+    return client.create_check_status_response(req, started)
+
+
 @app.route(route="approve/{instance_id}", methods=["POST"])
 @app.durable_client_input(client_name="client")
 async def approve(req: func.HttpRequest, client) -> func.HttpResponse:
